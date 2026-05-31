@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stock Credibility AI</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar" aria-label="Analysis controls">
+        <div class="brand-block">
+          <div class="status-chip">Live Analyst Console</div>
+          <p class="eyebrow">Investment Committee</p>
+          <h1>Stock Credibility AI</h1>
+          <p class="subtitle">Multi-agent technical, sentiment, and fundamental review with score arbitration.</p>
+        </div>
+        <form id="analysis-form" class="control-panel">
+          <label>
+            <span>Ticker</span>
+            <input id="ticker" name="ticker" placeholder="AAPL" value="AAPL" autocomplete="off" required />
+          </label>
+          <label>
+            <span>Period</span>
+            <select id="period" name="period">
+              <option value="6mo">6 months</option>
+              <option value="1y" selected>1 year</option>
+              <option value="2y">2 years</option>
+              <option value="5y">5 years</option>
+            </select>
+          </label>
+          <label>
+            <span>Interval</span>
+            <select id="interval" name="interval">
+              <option value="1d" selected>Daily</option>
+              <option value="1wk">Weekly</option>
+            </select>
+          </label>
+          <button id="run-button" type="submit">Run Analysis</button>
+        </form>
+      </section>
+
+      <section class="ticker-strip" aria-label="System status">
+        <div><span>Data</span><strong>Yahoo Finance + Google News RSS</strong></div>
+        <div><span>Runtime</span><strong>LangGraph Committee Loop</strong></div>
+        <div><span>Memory</span><strong>SQLite + ChromaDB</strong></div>
+      </section>
+
+      <section class="score-grid" aria-label="Score summary">
+        <article class="score-panel">
+          <div class="score-ring" id="score-ring" style="--score: 0">
+            <span id="score-value">--</span>
+            <small>/100</small>
+          </div>
+          <div>
+            <p class="panel-label">Credibility Score</p>
+            <h2 id="market-bias">Ready</h2>
+            <p id="score-caption">Enter a ticker symbol to convene the analyst committee.</p>
+          </div>
+        </article>
+        <article class="metric-panel">
+          <p class="panel-label">Committee Confidence</p>
+          <strong id="confidence-value">--</strong>
+          <span id="confidence-caption">Awaiting analysis</span>
+        </article>
+        <article class="metric-panel">
+          <p class="panel-label">Signal Conflicts</p>
+          <strong id="conflict-count">--</strong>
+          <span id="conflict-caption">None reviewed yet</span>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <aside class="live-panel">
+          <div class="section-heading">
+            <p class="eyebrow">Live Run</p>
+            <h2>Agent Activity</h2>
+          </div>
+          <ol id="activity-list" class="activity-list">
+            <li class="idle">Waiting for a ticker.</li>
+          </ol>
+        </aside>
+
+        <section class="results-panel">
+          <div class="section-heading">
+            <p class="eyebrow">Committee Output</p>
+            <h2>Analyst Views</h2>
+          </div>
+          <div id="agent-grid" class="agent-grid">
+            <article class="agent-card placeholder">Technical analyst pending.</article>
+            <article class="agent-card placeholder">Sentiment analyst pending.</article>
+            <article class="agent-card placeholder">Fundamental analyst pending.</article>
+          </div>
+        </section>
+      </section>
+
+      <section class="details-grid">
+        <article class="report-panel">
+          <div class="section-heading">
+            <p class="eyebrow">Final Report</p>
+            <h2>Analyst Summary</h2>
+          </div>
+          <p id="narrative">The final report will appear here after the score arbiter resolves agent views.</p>
+        </article>
+        <article class="weights-panel">
+          <div class="section-heading">
+            <p class="eyebrow">Arbitration</p>
+            <h2>Dynamic Weights</h2>
+          </div>
+          <div id="weights-list" class="weights-list"></div>
+          <ul id="conflicts-list" class="conflicts-list"></ul>
+        </article>
+      </section>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
