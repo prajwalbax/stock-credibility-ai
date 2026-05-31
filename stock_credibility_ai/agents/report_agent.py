@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import json
 import logging
+import asyncio
 
 from langchain_core.messages import AIMessage
 
 from stock_credibility_ai.graph.state import CredibilityState, FinalReport
+from stock_credibility_ai.models.evaluation_model import evaluate_analysis
+from stock_credibility_ai.models.explainability_model import explain_decision
+from stock_credibility_ai.utils.config import get_settings
 from stock_credibility_ai.utils.llm import build_chat_model
 
 logger = logging.getLogger(__name__)
@@ -15,12 +19,16 @@ async def report_agent(state: CredibilityState) -> dict:
     logger.info("Report agent writing final report for %s", state["ticker"])
     score = state["score"]
     agents = state.get("agent_outputs", {})
+    evaluation = evaluate_analysis(agents, score)
+    explainability = explain_decision(agents, score)
     narrative = await _generate_narrative(state)
     report = FinalReport(
         ticker=state["ticker"],
         score=score,
         agents=agents,
         narrative=narrative,
+        evaluation=evaluation,
+        explainability=explainability,
         limitations=[
             "This is an educational credibility analysis, not financial advice.",
             "Free data sources can be delayed, incomplete, or temporarily unavailable.",
@@ -39,24 +47,48 @@ async def _generate_narrative(state: CredibilityState) -> str:
         key: value.model_dump() for key, value in state.get("agent_outputs", {}).items()
     }
     fallback = _fallback_narrative(state)
+    settings = get_settings()
+    if not settings.enable_llm_report:
+        return fallback
+
     llm = build_chat_model()
     if llm is None:
         return fallback
 
     prompt = (
-        "You are the report chair of an investment committee. Write a concise, "
-        "analyst-style stock credibility report. Explain why the score was generated, "
-        "name conflicts, and avoid financial advice.\n\n"
+        "Write one concise analyst-style stock credibility summary in 120-160 words. "
+        "Explain the score, mention key conflicts, and avoid financial advice.\n\n"
         f"Ticker: {state['ticker']}\n"
         f"Score: {score.model_dump_json()}\n"
-        f"Agent views: {json.dumps(agent_payload, indent=2)}"
+        f"Agent views: {json.dumps(_compact_agent_payload(agent_payload), separators=(',', ':'))}"
     )
     try:
-        response = await llm.ainvoke(prompt)
+        response = await asyncio.wait_for(
+            llm.ainvoke(prompt),
+            timeout=settings.report_llm_timeout_seconds,
+        )
         return str(response.content)
+    except TimeoutError:
+        logger.warning(
+            "LLM report generation exceeded %.1fs; using fallback.",
+            settings.report_llm_timeout_seconds,
+        )
+        return fallback
     except Exception as exc:
         logger.warning("LLM report generation failed; using fallback: %s", exc)
         return fallback
+
+
+def _compact_agent_payload(agent_payload: dict) -> dict:
+    compact = {}
+    for name, payload in agent_payload.items():
+        compact[name] = {
+            "label": payload.get("label"),
+            "confidence": payload.get("confidence"),
+            "signals": payload.get("signals", [])[:4],
+            "risk_flags": payload.get("risk_flags", [])[:4],
+        }
+    return compact
 
 
 def _fallback_narrative(state: CredibilityState) -> str:

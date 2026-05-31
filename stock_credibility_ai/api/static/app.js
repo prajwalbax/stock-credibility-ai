@@ -16,6 +16,8 @@ const agentGrid = document.querySelector("#agent-grid");
 const narrative = document.querySelector("#narrative");
 const weightsList = document.querySelector("#weights-list");
 const conflictsList = document.querySelector("#conflicts-list");
+const xaiFactors = document.querySelector("#xai-factors");
+const evaluationMetrics = document.querySelector("#evaluation-metrics");
 
 const steps = [
   "Fetching free Yahoo Finance market data",
@@ -76,6 +78,8 @@ function setLoading(ticker) {
   narrative.textContent = "The final report will appear after the analyst committee finishes.";
   weightsList.innerHTML = "";
   conflictsList.innerHTML = "";
+  xaiFactors.innerHTML = "";
+  evaluationMetrics.innerHTML = "";
   agentGrid.innerHTML = steps.slice(1, 4).map((step) => `<article class="agent-card placeholder loading">${step}</article>`).join("");
   startProgress();
 }
@@ -127,6 +131,8 @@ function renderReport(report) {
   agentGrid.innerHTML = Object.values(report.agents).map(renderAgent).join("");
   weightsList.innerHTML = Object.entries(score.weights || {}).map(renderWeight).join("");
   conflictsList.innerHTML = score.conflicts.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  renderExplainability(report.explainability);
+  renderEvaluation(report.evaluation);
 }
 
 function renderAgent(agent) {
@@ -161,6 +167,72 @@ function renderWeight([name, value]) {
   `;
 }
 
+function renderExplainability(explainability) {
+  if (!explainability) {
+    xaiFactors.innerHTML = `<p class="empty-copy">Explainability data was not returned.</p>`;
+    return;
+  }
+  const positives = explainability.top_positive_factors || [];
+  const negatives = explainability.top_negative_factors || [];
+  xaiFactors.innerHTML = `
+    <div>
+      <h3>Positive Drivers</h3>
+      ${renderFactors(positives, "No positive drivers reported.")}
+    </div>
+    <div>
+      <h3>Risk Drivers</h3>
+      ${renderFactors(negatives, "No risk drivers reported.")}
+    </div>
+    <div class="trace-block">
+      <h3>Decision Trace</h3>
+      <ol>${(explainability.decision_trace || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>
+    </div>
+  `;
+}
+
+function renderFactors(factors, emptyText) {
+  if (!factors.length) return `<p class="empty-copy">${emptyText}</p>`;
+  return factors
+    .map(
+      (factor) => `
+        <article class="factor-card ${factor.direction}">
+          <strong>${escapeHtml(factor.source)} · ${Math.round(factor.impact)} impact</strong>
+          <span>${escapeHtml(factor.evidence)}</span>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderEvaluation(evaluation) {
+  if (!evaluation) {
+    evaluationMetrics.innerHTML = `<p class="empty-copy">Evaluation metrics were not returned.</p>`;
+    return;
+  }
+  const rows = [
+    ["Reliability", evaluation.reliability_score],
+    ["Agreement", evaluation.agreement_score],
+    ["Data Quality", evaluation.data_quality_score],
+    ["Conflict Rate", evaluation.conflict_rate],
+    ["Confidence Dispersion", evaluation.confidence_dispersion],
+  ];
+  evaluationMetrics.innerHTML = `
+    ${rows.map(([label, value]) => renderMetricRow(label, value)).join("")}
+    ${(evaluation.notes || []).map((note) => `<p class="metric-note">${escapeHtml(note)}</p>`).join("")}
+  `;
+}
+
+function renderMetricRow(label, value) {
+  const percent = Math.max(0, Math.min(100, Math.round(Number(value) * 100)));
+  return `
+    <div class="metric-row">
+      <span>${escapeHtml(label)}</span>
+      <div class="bar"><span style="--width: ${percent}%"></span></div>
+      <strong>${percent}%</strong>
+    </div>
+  `;
+}
+
 function listItems(items, emptyText) {
   const values = Array.isArray(items) && items.length ? items : [emptyText];
   return values.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
@@ -171,6 +243,8 @@ function renderError(error) {
   marketBias.textContent = "Error";
   scoreCaption.textContent = "The committee run could not complete. Check the backend logs for details.";
   agentGrid.innerHTML = `<article class="agent-card placeholder">${escapeHtml(error.message)}</article>`;
+  xaiFactors.innerHTML = "";
+  evaluationMetrics.innerHTML = "";
 }
 
 function escapeHtml(value) {
