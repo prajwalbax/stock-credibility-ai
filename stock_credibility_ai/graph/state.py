@@ -27,11 +27,41 @@ class ScoreOutput(BaseModel):
     weights: dict[str, float] = Field(default_factory=dict)
 
 
+class EvaluationMetrics(BaseModel):
+    agent_count: int
+    average_agent_confidence: float = Field(ge=0, le=1)
+    confidence_dispersion: float = Field(ge=0)
+    agreement_score: float = Field(ge=0, le=1)
+    conflict_rate: float = Field(ge=0, le=1)
+    data_quality_score: float = Field(ge=0, le=1)
+    reliability_score: float = Field(ge=0, le=1)
+    coverage: dict[str, bool] = Field(default_factory=dict)
+    notes: list[str] = Field(default_factory=list)
+
+
+class ExplanationItem(BaseModel):
+    feature: str
+    source: str
+    direction: Literal["positive", "negative", "neutral"]
+    impact: float
+    evidence: str
+
+
+class ExplainabilityReport(BaseModel):
+    methodology: str
+    agent_contributions: dict[str, float] = Field(default_factory=dict)
+    top_positive_factors: list[ExplanationItem] = Field(default_factory=list)
+    top_negative_factors: list[ExplanationItem] = Field(default_factory=list)
+    decision_trace: list[str] = Field(default_factory=list)
+
+
 class FinalReport(BaseModel):
     ticker: str
     score: ScoreOutput
     agents: dict[str, AgentOutput]
     narrative: str
+    evaluation: EvaluationMetrics | None = None
+    explainability: ExplainabilityReport | None = None
     limitations: list[str] = Field(default_factory=list)
 
 
